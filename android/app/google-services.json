@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "93461569187",
+    "firebase_url": "https://eweek-c745d-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "eweek-c745d",
+    "storage_bucket": "eweek-c745d.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:93461569187:android:8570065c74bc0fea87a916",
+        "android_client_info": {
+          "package_name": "com.am.eweek"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmxyTu2h4N22mH2VyQoJqsO3UFPGwIggA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:93461569187:android:ab37fdff2672b86f87a916",
+        "android_client_info": {
+          "package_name": "com.am.eweek_admin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDmxyTu2h4N22mH2VyQoJqsO3UFPGwIggA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
