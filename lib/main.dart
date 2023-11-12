@@ -2,14 +2,13 @@ import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:eweek_admin/Dimentions/dimention.dart';
 import 'package:eweek_admin/homePage/homepage.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:page_transition/page_transition.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  await FirebaseMessaging.instance.subscribeToTopic("EWeekNotification");
+  
   runApp(const MyApp());
 }
 
