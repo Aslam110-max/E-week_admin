@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eweek_admin/Colors/colors.dart';
 import 'package:eweek_admin/Dimentions/dimention.dart';
+import 'package:eweek_admin/homePage/add_eweeks.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -58,6 +58,7 @@ class _HomePageState extends State<HomePage> {
     if (result == null) return;
     setState(() {
       eventImage = result.files.first;
+      //print(eventImage!.extension);
     });
     _addFood(context);
   }
@@ -67,11 +68,12 @@ class _HomePageState extends State<HomePage> {
   ) async {
     final path =
         'Eweek$activatedYear/eventImages/$eventName.${eventImage!.extension}';
+        //print(path);
     final file = File(eventImage!.path!);
     final ref = FirebaseStorage.instance.ref().child(path);
     uploadTask = ref.putFile(file);
-    final snapshot = await uploadTask!.whenComplete(() {});
-    final downloadUrl = await snapshot.ref.getDownloadURL();
+    final snapshot = await uploadTask;
+    final downloadUrl = await snapshot!.ref.getDownloadURL();
     return downloadUrl;
   }
 
@@ -93,7 +95,7 @@ class _HomePageState extends State<HomePage> {
     // TODO: implement initState
     super.initState();
   }
-  /* Future<void> sendPushNotification(
+  Future<void> sendPushNotification(
      String title, String body) async {
     try {
       await http.post(Uri.parse('https://fcm.googleapis.com/fcm/send'),
@@ -120,7 +122,7 @@ class _HomePageState extends State<HomePage> {
       print('done');
     } catch (e) {
       print('Error is $e');
-    }}*/
+    }}
 
   void setInitialHeit() {
     setState(() {
@@ -318,7 +320,7 @@ class _HomePageState extends State<HomePage> {
                     ],
                     backgroundColor: Colors.transparent,
                     foregroundColor: Colors.transparent,
-                    title: eWeekHistoryList.length > 1
+                    /*eWeekHistoryList.length > 1
                         ? DropdownButton<String>(
                             dropdownColor: Colors.black,
                             iconSize: Dimensions.height10 * 2,
@@ -343,12 +345,18 @@ class _HomePageState extends State<HomePage> {
                               setInitialHeit();
                               await loadData();
                             })
-                        : Text(
-                            "E-Week $activatedYear",
-                            style: TextStyle(
-                                color: ColorClass.mainColor,
-                                fontSize: Dimensions.height10 * 1.1),
-                          ),
+                        : */
+                    title:  TextButton(
+                      onPressed: (){
+                        Navigator.push(context, MaterialPageRoute(builder: (context)=>AddEWeeks()));
+                      },
+                      child: Text(
+                              "E-Week $activatedYear",
+                              style: TextStyle(
+                                  color: ColorClass.mainColor,
+                                  fontSize: Dimensions.height10 * 1.1),
+                            ),
+                    ),
                   ),
                   backgroundColor: Colors.black,
                   body: noData
@@ -966,10 +974,10 @@ class _HomePageState extends State<HomePage> {
                                         .child("Eweek$activatedYear")
                                         .child('events')
                                         .child(
-                                            "${eventsMap[eventsList[i]]['name']}")
+                                            "${eventsList[i]}")
                                         .set(null);
 
-                                    /* try {
+                                    try {
                                            await FirebaseStorage.instance
                                         .ref(
                                             'Eweek$activatedYear/eventImages/${eventsMap[eventsList[i]]['name']}.jpg')
@@ -979,7 +987,8 @@ class _HomePageState extends State<HomePage> {
                                         .ref(
                                             'Eweek$activatedYear/eventImages/${eventsMap[eventsList[i]]['name']}.png')
                                         .delete();
-                                        }*/
+                                        }
+                                        await sendPushNotification("Checkout new updated events!", "New event points added");
                                     await loadData();
                                     await loadAppData();
 
@@ -1110,13 +1119,16 @@ class _HomePageState extends State<HomePage> {
                                 dateAndTimeId: {
                                   'imageUrl': ImageUrl,
                                   'name': eventNameController.text,
-                                  'points':{
+                                  'points':int.parse(eventPointsController.text),
+                                  'teamPoints':{
                                      for (String team
                           in (appDataMap['teams'] as Map).keys.toList())
                           team:teamPoits[team]
                                   }
                                 }
                               });
+                               await loadData();
+                            await loadAppData();
                               this.setState(() {
                                 setState(() {
                                   updateLoading = false;
