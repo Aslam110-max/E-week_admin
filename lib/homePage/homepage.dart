@@ -1,12 +1,16 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:eweek_admin/Colors/colors.dart';
 import 'package:eweek_admin/Dimentions/dimention.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:lottie/lottie.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
@@ -21,7 +25,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   bool eventsFinished = false;
-  bool loadingHistory=false;
+  bool loadingHistory = false;
   bool loading = true;
   bool noData = true;
   Map pointsMap = {};
@@ -41,6 +45,38 @@ class _HomePageState extends State<HomePage> {
   late double heit4;
   late double heit5;
   String activatedYear = "";
+  PlatformFile? eventImage;
+  UploadTask? uploadTask;
+  TextEditingController eventNameController = TextEditingController();
+  TextEditingController eventPointsController = TextEditingController();
+  Map teamPoits={};
+  _selectAdImage() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowedExtensions: ['jpg', 'png'],
+      type: FileType.custom,
+    );
+    if (result == null) return;
+    setState(() {
+      eventImage = result.files.first;
+    });
+    _addFood(context);
+  }
+
+  Future<String> uploadFoodImage(
+    String eventName,
+  ) async {
+    final path =
+        'Eweek$activatedYear/eventImages/$eventName.${eventImage!.extension}';
+    final file = File(eventImage!.path!);
+    final ref = FirebaseStorage.instance.ref().child(path);
+    uploadTask = ref.putFile(file);
+    final snapshot = await uploadTask!.whenComplete(() {});
+    final downloadUrl = await snapshot.ref.getDownloadURL();
+    return downloadUrl;
+  }
+
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+  bool updateLoading = false;
 
   @override
   void initState() {
@@ -57,7 +93,7 @@ class _HomePageState extends State<HomePage> {
     // TODO: implement initState
     super.initState();
   }
- /* Future<void> sendPushNotification(
+  /* Future<void> sendPushNotification(
      String title, String body) async {
     try {
       await http.post(Uri.parse('https://fcm.googleapis.com/fcm/send'),
@@ -86,24 +122,25 @@ class _HomePageState extends State<HomePage> {
       print('Error is $e');
     }}*/
 
-  void setInitialHeit(){
+  void setInitialHeit() {
     setState(() {
-   heit1 = Dimensions.height100 * 0.7;
-   heit2 = Dimensions.height100 * 0.7;
-   heit3 = Dimensions.height100 * 0.7;
-   heit4 = Dimensions.height100 * 0.7;
-   heit5 = Dimensions.height100 * 0.7;
-  
+      heit1 = Dimensions.height100 * 0.7;
+      heit2 = Dimensions.height100 * 0.7;
+      heit3 = Dimensions.height100 * 0.7;
+      heit4 = Dimensions.height100 * 0.7;
+      heit5 = Dimensions.height100 * 0.7;
     });
   }
+
   List sortMap(Map map) {
     Map tempMap = Map.fromEntries(
         map.entries.toList()..sort((e1, e2) => e2.value.compareTo(e1.value)));
 
     return tempMap.keys.toList();
   }
-Future loadAppData()async{
-  await database.child("History").once().then((value) {
+
+  Future loadAppData() async {
+    await database.child("History").once().then((value) {
       if (value.snapshot.value != null) {
         Map historyMap = value.snapshot.value as Map;
         eWeekHistoryList = historyMap.keys.toList();
@@ -118,9 +155,9 @@ Future loadAppData()async{
       });
     });
     await loadData();
-}
+  }
+
   Future<void> loadData() async {
-    
     await database.child("Eweek$activatedYear").once().then((value) {
       if (value.snapshot.value != null) {
         appDataMap = value.snapshot.value as Map;
@@ -131,21 +168,21 @@ Future loadAppData()async{
           setState(() {
             if (eventsList.length == appDataMap['totalEvents']) {
               eventsFinished = true;
-            }else{
+            } else {
               eventsFinished = false;
             }
             noData = false;
           });
-        }else{
+        } else {
           setState(() {
-            noData =true;
+            noData = true;
           });
         }
-      }else{
-          setState(() {
-            noData =true;
-          });
-        }
+      } else {
+        setState(() {
+          noData = true;
+        });
+      }
     });
     setState(() {
       loading = false;
@@ -183,7 +220,8 @@ Future loadAppData()async{
     print(pointsMap);
     print(eventTotalPoints);
   }
-     Future<void> requestPermission() async {
+
+  Future<void> requestPermission() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
     NotificationSettings settings = await messaging.requestPermission(
         alert: true,
@@ -250,176 +288,192 @@ Future loadAppData()async{
         )*/
             )
         : Stack(
-          children: [
-            Scaffold(
-                appBar: AppBar(
-                  elevation: 0,
-                  actions: [
-                    IconButton(
-                      onPressed: () {
-                        showCupertinoDialog(context: context, builder: alertDialog);
-                      },
-                      icon: Icon(Icons.info_outline_rounded),
-                      color: ColorClass.mainColor,
-                    )
-                  ],
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.transparent,
-                  title:eWeekHistoryList.length>1?  DropdownButton<String>(
-                    dropdownColor: Colors.black,
-                    iconSize: Dimensions.height10*2,
-                    underline: SizedBox(),
-                      value: activatedYear,
-                      items: eWeekHistoryList.map((year) {
-                        return DropdownMenuItem<String>(
-                          
-                          value: year,
-                          child: Text(
-                            "E-Week $year",
+            children: [
+              Scaffold(
+                  floatingActionButton: FloatingActionButton(
+                    onPressed: () {
+                      setState(() {
+                        teamPoits={};
+                        eventImage=null;
+                      });
+                      _addFood(context);
+                    },
+                    child: Icon(
+                      Icons.add,
+                      color: Colors.black,
+                    ),
+                    backgroundColor: Colors.white,
+                  ),
+                  appBar: AppBar(
+                    elevation: 0,
+                    actions: [
+                      IconButton(
+                        onPressed: () {
+                          showCupertinoDialog(
+                              context: context, builder: alertDialog);
+                        },
+                        icon: Icon(Icons.info_outline_rounded),
+                        color: ColorClass.mainColor,
+                      )
+                    ],
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.transparent,
+                    title: eWeekHistoryList.length > 1
+                        ? DropdownButton<String>(
+                            dropdownColor: Colors.black,
+                            iconSize: Dimensions.height10 * 2,
+                            underline: SizedBox(),
+                            value: activatedYear,
+                            items: eWeekHistoryList.map((year) {
+                              return DropdownMenuItem<String>(
+                                value: year,
+                                child: Text(
+                                  "E-Week $year",
+                                  style: TextStyle(
+                                      color: ColorClass.mainColor,
+                                      fontSize: Dimensions.height10 * 1.1),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (String? year) async {
+                              setState(() {
+                                activatedYear = "$year";
+                                loadingHistory = true;
+                              });
+                              setInitialHeit();
+                              await loadData();
+                            })
+                        : Text(
+                            "E-Week $activatedYear",
                             style: TextStyle(
                                 color: ColorClass.mainColor,
                                 fontSize: Dimensions.height10 * 1.1),
                           ),
-                        );
-                      }).toList(),
-                      onChanged: (String? year) async {
-                        setState(() {
-                          activatedYear = "$year";
-                          loadingHistory =true;
-                        });
-                        setInitialHeit();
-                        await loadData();
-                      }):
-
-                  Text(
-                "E-Week $activatedYear",
-                style: TextStyle(
-                    color: ColorClass.mainColor,
-                    fontSize: Dimensions.height10 * 1.1),
-              ),
-                ),
-                backgroundColor: Colors.black,
-                body: noData
-                    ? noDataAnimation()
-                    : RefreshIndicator(
-                        color: Color.fromARGB(255, 140, 11, 2),
-                        onRefresh: () async {
-                          await loadData();
-                          await loadAppData();
-                        },
-                        child: CustomScrollView(
-                          physics: const BouncingScrollPhysics(),
-                          controller: controller,
-                          slivers: [
-                            SliverAppBar(
-                              expandedHeight: Dimensions.height100 * 4,
-                              backgroundColor: Colors.transparent,
-                              flexibleSpace: FlexibleSpaceBar(
-                                background: Stack(
-                                  children: [
-                                    Padding(
-                                      padding:
-                                          EdgeInsets.only(top: Dimensions.height10),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceEvenly,
-                                        children: [
-                                          if (allTeams[3] != null)
-                                            threeDBox(
-                                                heit4,
-                                                appDataMap['teams'][allTeams[3]]
-                                                    ['imageUrl'],
-                                                allTeams[3],
-                                                pointsMap[allTeams[3]],
-                                                3),
-                                          if (allTeams[1] != null)
-                                            threeDBox(
-                                                heit2,
-                                                appDataMap['teams'][allTeams[1]]
-                                                    ['imageUrl'],
-                                                allTeams[1],
-                                                pointsMap[allTeams[1]],
-                                                1),
-                                          if (allTeams[0] != null)
-                                            threeDBox(
-                                                heit1,
-                                                appDataMap['teams'][allTeams[0]]
-                                                    ['imageUrl'],
-                                                allTeams[0],
-                                                pointsMap[allTeams[0]],
-                                                0),
-                                          if (allTeams[2] != null)
-                                            threeDBox(
-                                                heit3,
-                                                appDataMap['teams'][allTeams[2]]
-                                                    ['imageUrl'],
-                                                allTeams[2],
-                                                pointsMap[allTeams[2]],
-                                                2),
-                                          if (allTeams[4] != null)
-                                            threeDBox(
-                                                heit5,
-                                                appDataMap['teams'][allTeams[4]]
-                                                    ['imageUrl'],
-                                                allTeams[4],
-                                                pointsMap[allTeams[4]],
-                                                4),
-                                        ],
-                                      ),
-                                    ),
-                                    Column(
-                                      mainAxisAlignment: MainAxisAlignment.start,
-                                      children: [
-                                        SizedBox(
-                                          height: Dimensions.height100 * 2.8,
-                                        ),
-                                        percentageIndicator()
-                                      ],
-                                    )
-                                  ],
-                                ),
-                              ),
-                            ),
-                            SliverToBoxAdapter(
-                              child: Column(
-                                children: [
-                                  SizedBox(
-                                    height: Dimensions.height10,
-                                  ),
-                                  for (int i = 0; i < eventsList.length; ++i)
-                                    if (scollerFunction(i))
+                  ),
+                  backgroundColor: Colors.black,
+                  body: noData
+                      ? noDataAnimation()
+                      : RefreshIndicator(
+                          color: Color.fromARGB(255, 140, 11, 2),
+                          onRefresh: () async {
+                            await loadData();
+                            await loadAppData();
+                          },
+                          child: CustomScrollView(
+                            physics: const BouncingScrollPhysics(),
+                            controller: controller,
+                            slivers: [
+                              SliverAppBar(
+                                expandedHeight: Dimensions.height100 * 4,
+                                backgroundColor: Colors.transparent,
+                                flexibleSpace: FlexibleSpaceBar(
+                                  background: Stack(
+                                    children: [
                                       Padding(
                                         padding: EdgeInsets.only(
-                                            bottom: Dimensions.height10 * 2),
-                                        child: Opacity(
-                                          opacity: scale,
-                                          child: Transform(
-                                            transform: Matrix4.identity()
-                                              ..scale(scale, scale),
-                                            alignment: Alignment.bottomCenter,
-                                            child: Align(
-                                                heightFactor: 0.9,
-                                                alignment: Alignment.topCenter,
-                                                child: listViewWidget(i)),
-                                          ),
+                                            top: Dimensions.height10),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceEvenly,
+                                          children: [
+                                            if (allTeams[3] != null)
+                                              threeDBox(
+                                                  heit4,
+                                                  appDataMap['teams']
+                                                      [allTeams[3]]['imageUrl'],
+                                                  allTeams[3],
+                                                  pointsMap[allTeams[3]],
+                                                  3),
+                                            if (allTeams[1] != null)
+                                              threeDBox(
+                                                  heit2,
+                                                  appDataMap['teams']
+                                                      [allTeams[1]]['imageUrl'],
+                                                  allTeams[1],
+                                                  pointsMap[allTeams[1]],
+                                                  1),
+                                            if (allTeams[0] != null)
+                                              threeDBox(
+                                                  heit1,
+                                                  appDataMap['teams']
+                                                      [allTeams[0]]['imageUrl'],
+                                                  allTeams[0],
+                                                  pointsMap[allTeams[0]],
+                                                  0),
+                                            if (allTeams[2] != null)
+                                              threeDBox(
+                                                  heit3,
+                                                  appDataMap['teams']
+                                                      [allTeams[2]]['imageUrl'],
+                                                  allTeams[2],
+                                                  pointsMap[allTeams[2]],
+                                                  2),
+                                            if (allTeams[4] != null)
+                                              threeDBox(
+                                                  heit5,
+                                                  appDataMap['teams']
+                                                      [allTeams[4]]['imageUrl'],
+                                                  allTeams[4],
+                                                  pointsMap[allTeams[4]],
+                                                  4),
+                                          ],
                                         ),
+                                      ),
+                                      Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.start,
+                                        children: [
+                                          SizedBox(
+                                            height: Dimensions.height100 * 2.8,
+                                          ),
+                                          percentageIndicator()
+                                        ],
                                       )
-                                ],
+                                    ],
+                                  ),
+                                ),
                               ),
-                            )
-                          ],
-                        ),
-                      )),
-                      if(loadingHistory)
-                      Scaffold(
-                        backgroundColor: Color.fromARGB(193, 0, 0, 0),
-                        body: Center(
-            child: LoadingAnimationWidget.beat(
-                color: Color.fromARGB(255, 120, 8, 0),
-                size: Dimensions.height100 * 0.3)),
-                      )
-          ],
-        );
+                              SliverToBoxAdapter(
+                                child: Column(
+                                  children: [
+                                    SizedBox(
+                                      height: Dimensions.height10,
+                                    ),
+                                    for (int i = 0; i < eventsList.length; ++i)
+                                      if (scollerFunction(i))
+                                        Padding(
+                                          padding: EdgeInsets.only(
+                                              bottom: Dimensions.height10 * 2),
+                                          child: Opacity(
+                                            opacity: scale,
+                                            child: Transform(
+                                              transform: Matrix4.identity()
+                                                ..scale(scale, scale),
+                                              alignment: Alignment.bottomCenter,
+                                              child: Align(
+                                                  heightFactor: 0.9,
+                                                  alignment:
+                                                      Alignment.topCenter,
+                                                  child: listViewWidget(i)),
+                                            ),
+                                          ),
+                                        )
+                                  ],
+                                ),
+                              )
+                            ],
+                          ),
+                        )),
+              if (loadingHistory)
+                Scaffold(
+                  backgroundColor: Color.fromARGB(193, 0, 0, 0),
+                  body: Center(
+                      child: LoadingAnimationWidget.beat(
+                          color: Color.fromARGB(255, 120, 8, 0),
+                          size: Dimensions.height100 * 0.3)),
+                )
+            ],
+          );
   }
 
   Widget noDataAnimation() {
@@ -429,175 +483,190 @@ Future loadAppData()async{
   }
 
   Widget listViewWidget(int i) {
-    return Container(
-      decoration: BoxDecoration(
-          image: DecorationImage(
-              image: CachedNetworkImageProvider(
-                  eventsMap[eventsList[i]]['imageUrl']),
-              fit: BoxFit.fill),
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(Dimensions.height10),
-          border: Border.all(
-              color: Color.fromARGB(255, 129, 0, 0),
-              width: Dimensions.height10 * 0.2)),
-      height: Dimensions.height100 * 1.4,
-      width: Dimensions.width150 * 1.8,
-      child: Stack(
-        children: [
-          Center(
-            child: Container(
-              height: Dimensions.height100 * 1.38,
-              width: Dimensions.width150 * 1.77,
-              decoration: BoxDecoration(
+    return StatefulBuilder(builder: (context, setState) {
+      return Container(
+        decoration: BoxDecoration(
+            image: DecorationImage(
+                image: CachedNetworkImageProvider(
+                    eventsMap[eventsList[i]]['imageUrl']),
+                fit: BoxFit.fill),
+            color: Colors.black,
+            borderRadius: BorderRadius.circular(Dimensions.height10),
+            border: Border.all(
+                color: Color.fromARGB(255, 129, 0, 0),
+                width: Dimensions.height10 * 0.2)),
+        height: Dimensions.height100 * 1.5,
+        width: Dimensions.width150 * 1.8,
+        child: Stack(
+          children: [
+            Center(
+              child: Container(
+                height: Dimensions.height100 * 1.47,
+                width: Dimensions.width150 * 1.77,
+                decoration: BoxDecoration(
+                    borderRadius:
+                        BorderRadius.circular(Dimensions.height10 * 0.8),
+                    gradient: const LinearGradient(
+                        colors: [
+                          Color.fromARGB(255, 0, 0, 0),
+                          Color.fromARGB(142, 158, 158, 158)
+                        ],
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter)),
+              ),
+            ),
+            Center(
+              child: Container(
+                height: Dimensions.height100 * 1.38,
+                width: Dimensions.width150 * 1.77,
+                decoration: BoxDecoration(
                   borderRadius:
                       BorderRadius.circular(Dimensions.height10 * 0.8),
-                  gradient: const LinearGradient(colors: [
-                    Color.fromARGB(255, 0, 0, 0),
-                    Color.fromARGB(142, 158, 158, 158)
-                  ], begin: Alignment.bottomCenter, end: Alignment.topCenter)),
-            ),
-          ),
-          Center(
-            child: Container(
-              height: Dimensions.height100 * 1.38,
-              width: Dimensions.width150 * 1.77,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(Dimensions.height10 * 0.8),
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(Dimensions.height10),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "${eventsMap[eventsList[i]]['name']}",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: Dimensions.height10 * 1.8,
-                                fontWeight: FontWeight.w700),
-                          ),
-                          SizedBox(
-                            height: Dimensions.height10 * 0.1,
-                          ),
-                          Text(
-                            "Points for ${eventsMap[eventsList[i]]['points']}",
-                            style: TextStyle(
-                              color: Color.fromARGB(255, 255, 255, 255),
-                              fontSize: Dimensions.height10 * 0.7,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(Dimensions.height10),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              "${eventsMap[eventsList[i]]['name']}",
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: Dimensions.height10 * 1.8,
+                                  fontWeight: FontWeight.w700),
                             ),
-                          ),
-                        ],
+                            SizedBox(
+                              height: Dimensions.height10 * 0.1,
+                            ),
+                            Text(
+                              "Points for ${eventsMap[eventsList[i]]['points']}",
+                              style: TextStyle(
+                                color: Color.fromARGB(255, 255, 255, 255),
+                                fontSize: Dimensions.height10 * 0.7,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    SizedBox(
-                      child: Column(
-                        children: [
-                          for (int j = 0;
-                              j <
-                                  (sortMap(eventsMap[eventsList[i]]
-                                          ['teamPoints'] as Map))
-                                      .length;
-                              ++j)
-                            Align(
-                              heightFactor: 0.8,
-                              alignment: Alignment.topCenter,
-                              child: Container(
-                                width: Dimensions.width150 * 1.6 -
-                                    j * Dimensions.height10,
-                                height: Dimensions.height10 * 2,
-                                decoration: BoxDecoration(
-                                    border: Border.all(
-                                        color:
-                                            Color.fromARGB(255, 196, 157, 157)),
-                                    //boxShadow: [BoxShadow(color: Color.fromARGB(255, 203, 102, 2),offset: Offset(0, 2),blurRadius: Dimensions.height10*0.2)],
-                                    borderRadius: BorderRadius.circular(
-                                        Dimensions.height10),
-                                    gradient: const LinearGradient(
-                                      colors: [
-                                        Color.fromARGB(200, 84, 31, 31),
-                                        Color.fromARGB(200, 0, 0, 0),
-                                        Color.fromARGB(200, 84, 31, 31),
-                                      ],
-                                    )),
-                                child: Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.only(
-                                        left: Dimensions.height10,
-                                        right: Dimensions.height10),
-                                    child: Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        SizedBox(
-                                          child: Row(
-                                            children: [
-                                              Container(
-                                                height:
-                                                    Dimensions.height10 * 1.4,
-                                                width:
-                                                    Dimensions.height10 * 1.4,
-                                                decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    border: Border.all(
-                                                        color: Colors.white)),
-                                                child: Center(
-                                                  child: Text(
-                                                    "${j + 1}",
-                                                    style: TextStyle(
-                                                        fontSize: Dimensions
-                                                                .height10 *
-                                                            0.8,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color: Colors.white),
+                      SizedBox(
+                        child: Column(
+                          children: [
+                            for (int j = 0;
+                                j <
+                                    (sortMap(eventsMap[eventsList[i]]
+                                            ['teamPoints'] as Map))
+                                        .length;
+                                ++j)
+                              Align(
+                                heightFactor: 0.8,
+                                alignment: Alignment.topCenter,
+                                child: Container(
+                                  width: Dimensions.width150 * 1.6 -
+                                      j * Dimensions.height10,
+                                  height: Dimensions.height10 * 2,
+                                  decoration: BoxDecoration(
+                                      border: Border.all(
+                                          color: Color.fromARGB(
+                                              255, 196, 157, 157)),
+                                      //boxShadow: [BoxShadow(color: Color.fromARGB(255, 203, 102, 2),offset: Offset(0, 2),blurRadius: Dimensions.height10*0.2)],
+                                      borderRadius: BorderRadius.circular(
+                                          Dimensions.height10),
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color.fromARGB(200, 84, 31, 31),
+                                          Color.fromARGB(200, 0, 0, 0),
+                                          Color.fromARGB(200, 84, 31, 31),
+                                        ],
+                                      )),
+                                  child: Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.only(
+                                          left: Dimensions.height10,
+                                          right: Dimensions.height10),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          SizedBox(
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  height:
+                                                      Dimensions.height10 * 1.4,
+                                                  width:
+                                                      Dimensions.height10 * 1.4,
+                                                  decoration: BoxDecoration(
+                                                      shape: BoxShape.circle,
+                                                      border: Border.all(
+                                                          color: Colors.white)),
+                                                  child: Center(
+                                                    child: Text(
+                                                      "${j + 1}",
+                                                      style: TextStyle(
+                                                          fontSize: Dimensions
+                                                                  .height10 *
+                                                              0.8,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          color: Colors.white),
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                              SizedBox(
-                                                width: Dimensions.width10,
-                                              ),
-                                              Text(
-                                                "${sortMap(eventsMap[eventsList[i]]['teamPoints'] as Map)[j]}",
-                                                style: TextStyle(
-                                                    color: Color.fromARGB(
-                                                        255, 255, 255, 255),
-                                                    fontSize:
-                                                        Dimensions.height10 *
-                                                            0.8),
-                                              ),
-                                            ],
+                                                SizedBox(
+                                                  width: Dimensions.width10,
+                                                ),
+                                                Text(
+                                                  "${sortMap(eventsMap[eventsList[i]]['teamPoints'] as Map)[j]}",
+                                                  style: TextStyle(
+                                                      color: Color.fromARGB(
+                                                          255, 255, 255, 255),
+                                                      fontSize:
+                                                          Dimensions.height10 *
+                                                              0.8),
+                                                ),
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        Text(
-                                          "Points: ${(eventsMap[eventsList[i]]['teamPoints'] as Map)[sortMap(eventsMap[eventsList[i]]['teamPoints'] as Map)[j]]}",
-                                          style: TextStyle(
-                                              color: Color.fromARGB(
-                                                  255, 255, 255, 255),
-                                              fontSize:
-                                                  Dimensions.height10 * 0.8),
-                                        ),
-                                      ],
+                                          Text(
+                                            "Points: ${(eventsMap[eventsList[i]]['teamPoints'] as Map)[sortMap(eventsMap[eventsList[i]]['teamPoints'] as Map)[j]]}",
+                                            style: TextStyle(
+                                                color: Color.fromARGB(
+                                                    255, 255, 255, 255),
+                                                fontSize:
+                                                    Dimensions.height10 * 0.8),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                    )
-                  ],
+                          ],
+                        ),
+                      )
+                    ],
+                  ),
                 ),
               ),
             ),
-          )
-        ],
-      ),
-    );
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              IconButton(
+                  onPressed: () {
+                    deleteDialogBox(i);
+                    print("object");
+                  },
+                  icon: Icon(Icons.remove_circle,
+                      color: const Color.fromARGB(255, 87, 6, 0)))
+            ]),
+          ],
+        ),
+      );
+    });
   }
 
   Widget threeDBox(
@@ -672,7 +741,7 @@ Future loadAppData()async{
                         Column(
                           children: [
                             SizedBox(
-                              height: Dimensions.height10 * 4.4,
+                              height: Dimensions.height10 * 4.25,
                             ),
                             Center(
                                 child: Text(
@@ -853,4 +922,220 @@ Future loadAppData()async{
           )
         ],
       );
+  deleteDialogBox(int i) {
+    bool deleting = false;
+    showDialog(
+        context: context,
+        builder: (context) {
+          return StatefulBuilder(builder: (context, setState) {
+            return AlertDialog(
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              content: Container(
+                height: 200,
+                child: Column(
+                  children: [
+                    Text(
+                      'Do you want to delete?',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: Dimensions.height10 * 1.5),
+                    ),
+                    !deleting
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              TextButton(
+                                  onPressed: () {
+                                    Navigator.pop(context);
+                                  },
+                                  child: Text(
+                                    'No',
+                                    style: TextStyle(
+                                        fontSize: Dimensions.height10 * 1.5,
+                                        color: Colors.white54),
+                                  )),
+                              TextButton(
+                                  onPressed: () async {
+                                    setState(() {
+                                      deleting = true;
+                                    });
+                                    DatabaseReference database =
+                                        FirebaseDatabase.instance.ref();
+                                    database
+                                        .child("Eweek$activatedYear")
+                                        .child('events')
+                                        .child(
+                                            "${eventsMap[eventsList[i]]['name']}")
+                                        .set(null);
+
+                                    /* try {
+                                           await FirebaseStorage.instance
+                                        .ref(
+                                            'Eweek$activatedYear/eventImages/${eventsMap[eventsList[i]]['name']}.jpg')
+                                        .delete();
+                                        } catch (e) {
+                                           await FirebaseStorage.instance
+                                        .ref(
+                                            'Eweek$activatedYear/eventImages/${eventsMap[eventsList[i]]['name']}.png')
+                                        .delete();
+                                        }*/
+                                    await loadData();
+                                    await loadAppData();
+
+                                    this.setState(() {
+                                      setState(() {
+                                        deleting = false;
+                                      });
+                                    });
+                                    Navigator.pop(context);
+                                  },
+                                  child: Text(
+                                    'yes',
+                                    style: TextStyle(
+                                        fontSize: Dimensions.height10 * 1.5,
+                                        color: Colors.red[700]),
+                                  )),
+                            ],
+                          )
+                        : Text(
+                            'Deleting',
+                            style: TextStyle(color: ColorClass.mainColor),
+                          )
+                  ],
+                ),
+              ),
+            );
+          });
+        });
+  }
+
+  _addFood(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(builder: (context, setState) {
+          return AlertDialog(
+            title: const Text(
+              'Add Food',
+              style: TextStyle(fontSize: 20),
+            ),
+            actions: [
+              Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          IconButton(
+                              onPressed: () {
+                                _selectAdImage();
+                                Navigator.pop(context);
+                              },
+                              icon: const Icon(Icons.photo)),
+                          if (eventImage != null)
+                            Expanded(
+                                child: Text(
+                              eventImage!.name,
+                              overflow: TextOverflow.ellipsis,
+                            ))
+                          else
+                            const Text('no Selected image'),
+                        ],
+                      ),
+                      TextFormField(
+                          validator: (val) {
+                            if (val!.isEmpty) return "Enter Event Name";
+                            return null;
+                          },
+                          decoration: InputDecoration(hintText: "Event Name"),
+                          controller: eventNameController),
+                      TextFormField(
+                          keyboardType: TextInputType.number,
+                          validator: (val) {
+                            if (val!.isEmpty) return "Event maximum ponits";
+                            return null;
+                          },
+                          decoration: InputDecoration(
+                            hintText: "Event points",
+                          ),
+                          controller: eventPointsController),
+                      for (String team
+                          in (appDataMap['teams'] as Map).keys.toList())
+                        TextFormField(
+                          onChanged: (points){
+                           if(points!=""){
+                             this.setState(() {
+                              setState((){
+                                teamPoits[team]=int.parse(points);
+                                print(teamPoits.length);
+                              });
+                            });
+                           }else{
+                            this.setState(() {
+                              setState((){
+                                teamPoits.remove(team);
+                                
+                              });});
+                           }
+                          },
+                          keyboardType: TextInputType.number,
+                          validator: (val) {
+                            if (val!.isEmpty) return "Enter team points";
+                            return null;
+                          },
+                          decoration: InputDecoration(hintText: team),
+                        ),
+                      TextButton(
+                          onPressed: () async {
+                            if (_formKey.currentState!.validate()&& teamPoits.length==(appDataMap['teams'] as Map).keys.toList().length && !updateLoading&&eventImage!=null) {
+                              this.setState(() {
+                                setState(() {
+                                  updateLoading = true;
+                                });
+                              });
+                              String dateAndTimeId =
+                                  DateFormat('yyyy-MM-dd kk:mm:ss')
+                                      .format(DateTime.now())
+                                      .replaceAll(RegExp('[^A-Za-z0-9]'), '');
+                              DatabaseReference database =
+                                  FirebaseDatabase.instance.ref();
+                              String ImageUrl = await uploadFoodImage(
+                                eventNameController.text,
+                              );
+                              await database
+                                  .child("Eweek$activatedYear")
+                                  .child('events')
+                                  .update({
+                                dateAndTimeId: {
+                                  'imageUrl': ImageUrl,
+                                  'name': eventNameController.text,
+                                  'points':{
+                                     for (String team
+                          in (appDataMap['teams'] as Map).keys.toList())
+                          team:teamPoits[team]
+                                  }
+                                }
+                              });
+                              this.setState(() {
+                                setState(() {
+                                  updateLoading = false;
+                                });
+                              });
+                              Navigator.pop(context);
+                            }
+                          },
+                          child: Text(
+                            updateLoading ? 'Adding' : 'Add',
+                            style: TextStyle(
+                                fontSize: 20, color: ColorClass.mainColor),
+                          ))
+                    ],
+                  ))
+            ],
+          );
+        });
+      },
+    );
+  }
 }
