@@ -92,6 +92,8 @@ class _HomePageState extends State<HomePage> {
         topContainer = value;
       });
     });
+    
+    //sendPushNotification("title", "body");
     // TODO: implement initState
     super.initState();
   }
@@ -348,7 +350,7 @@ class _HomePageState extends State<HomePage> {
                         : */
                     title:  TextButton(
                       onPressed: (){
-                        Navigator.push(context, MaterialPageRoute(builder: (context)=>AddEWeeks()));
+                        Navigator.push(context, MaterialPageRoute(builder: (context)=>AddEWeeks(eHist: eWeekHistoryList,currentY: activatedYear,)));
                       },
                       child: Text(
                               "E-Week $activatedYear",
@@ -983,15 +985,22 @@ class _HomePageState extends State<HomePage> {
                                             'Eweek$activatedYear/eventImages/${eventsMap[eventsList[i]]['name']}.jpg')
                                         .delete();
                                         } catch (e) {
-                                           await FirebaseStorage.instance
+                                           try {
+                                             await FirebaseStorage.instance
                                         .ref(
                                             'Eweek$activatedYear/eventImages/${eventsMap[eventsList[i]]['name']}.png')
                                         .delete();
+                                           } catch (e) {
+                                             await FirebaseStorage.instance
+                                        .ref(
+                                            'Eweek$activatedYear/eventImages/${eventsMap[eventsList[i]]['name']}.jpeg')
+                                        .delete();
+                                           }
                                         }
-                                        await sendPushNotification("Checkout new updated events!", "New event points added");
+                                    
                                     await loadData();
                                     await loadAppData();
-
+                                    //await sendPushNotification("Checkout new updated events!", "New event points added");
                                     this.setState(() {
                                       setState(() {
                                         deleting = false;
@@ -1129,6 +1138,7 @@ class _HomePageState extends State<HomePage> {
                               });
                                await loadData();
                             await loadAppData();
+                            await sendPushNotification("Checkout new updated events!", "New event's points added");
                               this.setState(() {
                                 setState(() {
                                   updateLoading = false;
