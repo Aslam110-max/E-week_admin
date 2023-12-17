@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage> {
       });
     });
     
-    //sendPushNotification("title", "body");
+    sendPushNotification("Sorry!", "Please wait, We are updating our app for better user experience..");
     // TODO: implement initState
     super.initState();
   }
@@ -136,11 +136,13 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  List sortMap(Map map) {
-    Map tempMap = Map.fromEntries(
-        map.entries.toList()..sort((e1, e2) => e2.value.compareTo(e1.value)));
+   List sortMap(Map map) {
+    List tempList = map.keys.toList();
+    tempList.sort();
+    /*Map tempMap = Map.fromEntries(
+        map.entries.toList()..sort((e1, e2) => e2.value.compareTo(e1.value)));*/
 
-    return tempMap.keys.toList();
+    return tempList;
   }
 
   Future loadAppData() async {
@@ -197,14 +199,28 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  void calculatePoints() {
+   void calculatePoints() {
     pointsMap = {};
     eventTotalPoints = 0;
     for (String event in eventsList) {
       Map teamsPointsMap = eventsMap[event]['teamPoints'] as Map;
-      List teamsList = teamsPointsMap.keys.toList();
+       List teamsList=[];
+      List rankList = teamsPointsMap.keys.toList();
+      for(String rank in rankList){
+        teamsList.add(teamsPointsMap[rank]['team']);
+        String team =teamsPointsMap[rank]['team'];
+        if(teamsPointsMap[rank]['points']!=null){if (pointsMap[team] != null) {
+          setState(() {
+            pointsMap[team] = pointsMap[team] + teamsPointsMap[rank]['points'];
+          });
+        } else {
+          pointsMap[team] = teamsPointsMap[rank]['points'];
+        }}
+         print(pointsMap);
+      }
+      //List teamsList = teamsPointsMap.keys.toList();
       eventTotalPoints += eventsMap[event]['points'];
-      for (String team in teamsList) {
+      /*for (String team in teamsList) {
         if (pointsMap[team] != null) {
           setState(() {
             pointsMap[team] = pointsMap[team] + teamsPointsMap[team];
@@ -212,7 +228,7 @@ class _HomePageState extends State<HomePage> {
         } else {
           pointsMap[team] = teamsPointsMap[team];
         }
-      }
+      }*/
     }
     setState(() {
       eventsList.sort();
@@ -220,10 +236,18 @@ class _HomePageState extends State<HomePage> {
       pointsMap = Map.fromEntries(pointsMap.entries.toList()
         ..sort((e1, e2) => e2.value.compareTo(e1.value)));
       allTeams = pointsMap.keys.toList();
+      List totalTeams =(appDataMap['teams'] as Map).keys.toList();
+      for(String team in totalTeams){
+        if(!allTeams.contains(team)){
+          pointsMap[team] =0;
+          allTeams.add(team);
+        }
+      }
     });
-    print(pointsMap);
+   
     print(eventTotalPoints);
   }
+
 
   Future<void> requestPermission() async {
     FirebaseMessaging messaging = FirebaseMessaging.instance;
@@ -572,6 +596,7 @@ class _HomePageState extends State<HomePage> {
                                             ['teamPoints'] as Map))
                                         .length;
                                 ++j)
+                                if(eventsMap[eventsList[i]]['teamPoints'][sortMap(eventsMap[eventsList[i]]['teamPoints'] as Map)[j]]["points"]!=0)
                               Align(
                                 heightFactor: 0.8,
                                 alignment: Alignment.topCenter,
@@ -631,7 +656,7 @@ class _HomePageState extends State<HomePage> {
                                                   width: Dimensions.width10,
                                                 ),
                                                 Text(
-                                                  "${sortMap(eventsMap[eventsList[i]]['teamPoints'] as Map)[j]}",
+                                                  "${eventsMap[eventsList[i]]['teamPoints'][sortMap(eventsMap[eventsList[i]]['teamPoints'] as Map)[j]]["team"]}",
                                                   style: TextStyle(
                                                       color: Color.fromARGB(
                                                           255, 255, 255, 255),
@@ -643,7 +668,7 @@ class _HomePageState extends State<HomePage> {
                                             ),
                                           ),
                                           Text(
-                                            "Points: ${(eventsMap[eventsList[i]]['teamPoints'] as Map)[sortMap(eventsMap[eventsList[i]]['teamPoints'] as Map)[j]]}",
+                                            "Points: ${eventsMap[eventsList[i]]['teamPoints'][sortMap(eventsMap[eventsList[i]]['teamPoints'] as Map)[j]]["points"]}",
                                             style: TextStyle(
                                                 color: Color.fromARGB(
                                                     255, 255, 255, 255),
@@ -1078,17 +1103,29 @@ class _HomePageState extends State<HomePage> {
                             hintText: "Event points",
                           ),
                           controller: eventPointsController),
-                      for (String team
-                          in (appDataMap['teams'] as Map).keys.toList())
+                      for (int i=0;i<((appDataMap['teams'] as Map).keys.toList()).length;i++
+                       /* String team
+                          in (appDataMap['teams'] as Map).keys.toList()*/)
                         TextFormField(
                           onChanged: (points){
+                            String team = points.split('=')[0];
+                            String point = "0";
+                            if(points.split('=').length>1 &&points.split('=')[1].length>0 ){
+                              this.setState(() {
+                                setState((){
+                                  point = points.split('=')[1];
+                                });
+                              });
+                            }
                            if(points!=""){
                              this.setState(() {
                               setState((){
-                                teamPoits[team]=int.parse(points);
-                                print(teamPoits.length);
+                                teamPoits[team]=int.parse(point);
+                               teamPoits = Map.fromEntries(
+        teamPoits.entries.toList()..sort((e1, e2) => e2.value.compareTo(e1.value)));
                               });
                             });
+                            print(teamPoits);
                            }else{
                             this.setState(() {
                               setState((){
@@ -1097,16 +1134,16 @@ class _HomePageState extends State<HomePage> {
                               });});
                            }
                           },
-                          keyboardType: TextInputType.number,
+                          //keyboardType: TextInputType.text,
                           validator: (val) {
                             if (val!.isEmpty) return "Enter team points";
                             return null;
                           },
-                          decoration: InputDecoration(hintText: team),
+                          decoration: InputDecoration(hintText: "${i+1}"),
                         ),
                       TextButton(
                           onPressed: () async {
-                            if (_formKey.currentState!.validate()&& teamPoits.length==(appDataMap['teams'] as Map).keys.toList().length && !updateLoading&&eventImage!=null) {
+                            if ( !updateLoading&&eventImage!=null) {
                               this.setState(() {
                                 setState(() {
                                   updateLoading = true;
@@ -1130,9 +1167,15 @@ class _HomePageState extends State<HomePage> {
                                   'name': eventNameController.text,
                                   'points':int.parse(eventPointsController.text),
                                   'teamPoints':{
-                                     for (String team
+                                    for(int a=0;a<((appDataMap['teams'] as Map).keys.toList()).length;++a)
+                                    if(((appDataMap['teams'] as Map).keys.toList()).contains(((appDataMap['teams'] as Map).keys.toList())[a])&&teamPoits[((appDataMap['teams'] as Map).keys.toList())[a]]!=null)
+                                    'R${a+1}':{
+                                      'team':((appDataMap['teams'] as Map).keys.toList())[a],
+                                      'points':teamPoits[((appDataMap['teams'] as Map).keys.toList())[a]]
+                                    }
+                                     /*for (String team
                           in (appDataMap['teams'] as Map).keys.toList())
-                          team:teamPoits[team]
+                          team:teamPoits[team]*/
                                   }
                                 }
                               });
