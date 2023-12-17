@@ -1120,7 +1120,7 @@ class _HomePageState extends State<HomePage> {
                            if(points!=""){
                              this.setState(() {
                               setState((){
-                                teamPoits[team]=int.parse(point);
+                                teamPoits["$team-$i"]=int.parse(point);
                                teamPoits = Map.fromEntries(
         teamPoits.entries.toList()..sort((e1, e2) => e2.value.compareTo(e1.value)));
                               });
@@ -1168,9 +1168,9 @@ class _HomePageState extends State<HomePage> {
                                   'points':int.parse(eventPointsController.text),
                                   'teamPoints':{
                                     for(int a=0;a<teamPoits.length;++a)
-                                    if(((appDataMap['teams'] as Map).keys.toList()).contains((teamPoits.keys.toList())[a])&&teamPoits[(teamPoits.keys.toList())[a]]!=null)
+                                    if(((appDataMap['teams'] as Map).keys.toList()).contains(((teamPoits.keys.toList())[a]).split('-')[0])&&teamPoits[(teamPoits.keys.toList())[a]]!=null)
                                     'R${a+1}':{
-                                      'team':(teamPoits.keys.toList())[a],
+                                      'team':((teamPoits.keys.toList())[a]).split('-')[0],
                                       'points':teamPoits[(teamPoits.keys.toList())[a]]
                                     }
                                      /*for (String team
