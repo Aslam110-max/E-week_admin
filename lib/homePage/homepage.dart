@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage> {
       });
     });
     
-    sendPushNotification("Thanks for your waiting!", "Please update your EWeek app on play Store..");
+   /* sendPushNotification("Thanks for your waiting!", "Please update your EWeek app on play Store..");*/
     // TODO: implement initState
     super.initState();
   }
@@ -1181,7 +1181,7 @@ class _HomePageState extends State<HomePage> {
                               });
                                await loadData();
                             await loadAppData();
-                            /*await sendPushNotification("Checkout new updated events!", "New event's points added");*/
+                            await sendPushNotification("Checkout new updated events!", "New event's points added");
                               this.setState(() {
                                 setState(() {
                                   updateLoading = false;
