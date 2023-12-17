@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage> {
       });
     });
     
-   /* sendPushNotification("Sorry!", "Please wait, We are updating our app for better user experience..");*/
+    sendPushNotification("Thanks for your waiting!", "Please update your EWeek app on play Store..");
     // TODO: implement initState
     super.initState();
   }
@@ -1167,11 +1167,11 @@ class _HomePageState extends State<HomePage> {
                                   'name': eventNameController.text,
                                   'points':int.parse(eventPointsController.text),
                                   'teamPoints':{
-                                    for(int a=0;a<((appDataMap['teams'] as Map).keys.toList()).length;++a)
-                                    if(((appDataMap['teams'] as Map).keys.toList()).contains(((appDataMap['teams'] as Map).keys.toList())[a])&&teamPoits[((appDataMap['teams'] as Map).keys.toList())[a]]!=null)
+                                    for(int a=0;a<teamPoits.length;++a)
+                                    if(((appDataMap['teams'] as Map).keys.toList()).contains((teamPoits.keys.toList())[a])&&teamPoits[(teamPoits.keys.toList())[a]]!=null)
                                     'R${a+1}':{
-                                      'team':((appDataMap['teams'] as Map).keys.toList())[a],
-                                      'points':teamPoits[((appDataMap['teams'] as Map).keys.toList())[a]]
+                                      'team':(teamPoits.keys.toList())[a],
+                                      'points':teamPoits[(teamPoits.keys.toList())[a]]
                                     }
                                      /*for (String team
                           in (appDataMap['teams'] as Map).keys.toList())
@@ -1181,7 +1181,7 @@ class _HomePageState extends State<HomePage> {
                               });
                                await loadData();
                             await loadAppData();
-                            await sendPushNotification("Checkout new updated events!", "New event's points added");
+                            /*await sendPushNotification("Checkout new updated events!", "New event's points added");*/
                               this.setState(() {
                                 setState(() {
                                   updateLoading = false;
