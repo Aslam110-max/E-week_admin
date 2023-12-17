@@ -93,7 +93,7 @@ class _HomePageState extends State<HomePage> {
       });
     });
     
-    sendPushNotification("Sorry!", "Please wait, We are updating our app for better user experience..");
+   /* sendPushNotification("Sorry!", "Please wait, We are updating our app for better user experience..");*/
     // TODO: implement initState
     super.initState();
   }
