@@ -16,6 +16,7 @@ import 'package:lottie/lottie.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:http/http.dart' as http;
 
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -45,10 +46,12 @@ class _HomePageState extends State<HomePage> {
   late double heit4;
   late double heit5;
   String activatedYear = "";
+
   PlatformFile? eventImage;
   UploadTask? uploadTask;
   TextEditingController eventNameController = TextEditingController();
   TextEditingController eventPointsController = TextEditingController();
+  TextEditingController imageUrlController = TextEditingController();
   Map teamPoits={};
   _selectAdImage() async {
     final result = await FilePicker.platform.pickFiles(
@@ -1103,6 +1106,13 @@ class _HomePageState extends State<HomePage> {
                             hintText: "Event points",
                           ),
                           controller: eventPointsController),
+                           TextFormField(
+                          keyboardType: TextInputType.number,
+                         
+                          decoration: InputDecoration(
+                            hintText: "imageUrl",
+                          ),
+                          controller: imageUrlController),
                       for (int i=0;i<((appDataMap['teams'] as Map).keys.toList()).length;i++
                        /* String team
                           in (appDataMap['teams'] as Map).keys.toList()*/)
@@ -1143,7 +1153,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       TextButton(
                           onPressed: () async {
-                            if ( !updateLoading&&eventImage!=null) {
+                            if ( !updateLoading&&(eventImage!=null||!imageUrlController.text.isEmpty)) {
                               this.setState(() {
                                 setState(() {
                                   updateLoading = true;
@@ -1155,9 +1165,9 @@ class _HomePageState extends State<HomePage> {
                                       .replaceAll(RegExp('[^A-Za-z0-9]'), '');
                               DatabaseReference database =
                                   FirebaseDatabase.instance.ref();
-                              String ImageUrl = await uploadFoodImage(
+                              String ImageUrl =eventImage!=null? await uploadFoodImage(
                                 eventNameController.text,
-                              );
+                              ):imageUrlController.text;
                               await database
                                   .child("Eweek$activatedYear")
                                   .child('events')
